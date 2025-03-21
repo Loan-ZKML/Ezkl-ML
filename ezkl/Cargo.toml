@@ -4,12 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.97"
-synthetic_data = { path = "../synthetic_data" }
-serde = { version = "1.0.218", features = ["derive"] }
-serde_json = "1.0.140"
-sha2 = "0.11.0-pre.5"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
 hex = "0.4"
-
-[dev-dependencies]
-
+synthetic_data = { path = "../synthetic_data" }
