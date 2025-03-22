@@ -15,7 +15,6 @@ use crate::proof_registry::create_proof_registry;
 use crate::script_generator::{create_model_script, create_ezkl_script};
 use crate::utils::{address_to_filename, get_features_for_address};
 
-const DEBUG: bool = true;
 const CONTRACTS_SRC_PATH: &str = "../../contracts/src";
 const CONTRACTS_SCRIPT_PATH: &str = "../../contracts/script";
 
@@ -96,14 +95,6 @@ fn main() -> Result<()> {
         format!("{}/calldata.json", CONTRACTS_SCRIPT_PATH)
     )?;
 
-    if DEBUG {
-        // Copy metadata for debugging
-        fs::copy(
-            format!("{}/metadata.json", medium_dir),
-            format!("{}/metadata.json", CONTRACTS_SCRIPT_PATH)
-        )?;
-    }
-    
     println!("Proof generation complete!");
     println!("Generated artifacts:");
     println!(" - Models and proofs for each address in proof_generation/<address>/");
