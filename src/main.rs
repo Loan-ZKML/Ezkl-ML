@@ -49,12 +49,4 @@ fn main() {
         }
         None => {}
     }
-
-    // Change the address comparison:
-    let is_medium_tier = *address == MEDIUM_TIER_ADDRESS;
-
-    // Change the script creation by removing the extra argument:
-    let mut script = String::from(r#"#!/usr/bin/env bash
-// ...existing script content...
-"#);
 }
