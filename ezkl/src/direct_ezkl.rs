@@ -50,9 +50,16 @@ pub fn run_ezkl_process(working_dir: &Path) -> Result<()> {
     execute_ezkl(
         &["gen-settings", 
           "-M", &onnx_model_path.to_string_lossy(), 
-          "-O", &settings_path.to_string_lossy()],
+          "-O", &settings_path.to_string_lossy(),
+          "--logrows", "20"],
         working_dir,
     )?;
+    
+    // Update logrows in settings.json
+    let settings_content = std::fs::read_to_string(&settings_path)?;
+    let mut settings: serde_json::Value = serde_json::from_str(&settings_content)?;
+    settings["run_args"]["logrows"] = serde_json::Value::Number(serde_json::Number::from(20));
+    std::fs::write(&settings_path, serde_json::to_string_pretty(&settings)?)?;
     
     // Step 2: Calibrate settings
     println!("Calibrating settings...");
@@ -60,17 +67,19 @@ pub fn run_ezkl_process(working_dir: &Path) -> Result<()> {
         &["calibrate-settings", 
           "-M", &onnx_model_path.to_string_lossy(), 
           "-D", &ezkl_input_path.to_string_lossy(), 
-          "-O", &settings_path.to_string_lossy()],
+          "-O", &settings_path.to_string_lossy(),
+          "--logrows", "20"],
         working_dir,
     )?;
     
     // Step 3: Compile model to circuit
     println!("Compiling model to circuit...");
     execute_ezkl(
-        &["compile-circuit", 
-          "-M", &onnx_model_path.to_string_lossy(), 
-          "--compiled-circuit", &compiled_path.to_string_lossy(), 
-          "-S", &settings_path.to_string_lossy()],
+        &[\"compile-circuit\", 
+          \"-M\", &onnx_model_path.to_string_lossy(), 
+          \"--compiled-circuit\", &compiled_path.to_string_lossy(), 
+          \"-S\", &settings_path.to_string_lossy(),
+          \"--logrows\", \"20\"],
         working_dir,
     )?;
     
@@ -91,7 +100,8 @@ pub fn run_ezkl_process(working_dir: &Path) -> Result<()> {
           "-M", &compiled_path.to_string_lossy(), 
           "--pk-path", &pk_path.to_string_lossy(), 
           "--vk-path", &vk_path.to_string_lossy(), 
-          "--srs-path", &srs_path.to_string_lossy()],
+          "--srs-path", &srs_path.to_string_lossy(),
+          "--logrows", "20"],
         working_dir,
     )?;
     
@@ -113,7 +123,8 @@ pub fn run_ezkl_process(working_dir: &Path) -> Result<()> {
           "--proof-path", &proof_path.to_string_lossy(), 
           "--pk-path", &pk_path.to_string_lossy(), 
           "--compiled-circuit", &compiled_path.to_string_lossy(),
-          "--srs-path", &srs_path.to_string_lossy()],
+          "--srs-path", &srs_path.to_string_lossy(),
+          "--logrows", "20"],
         working_dir,
     )?;
     
@@ -123,7 +134,8 @@ pub fn run_ezkl_process(working_dir: &Path) -> Result<()> {
         &["verify", 
           "--proof-path", &proof_path.to_string_lossy(), 
           "--vk-path", &vk_path.to_string_lossy(),
-          "--srs-path", &srs_path.to_string_lossy()],
+          "--srs-path", &srs_path.to_string_lossy(),
+          "--logrows", "20"],
         working_dir,
     )?;
     
