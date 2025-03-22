@@ -21,6 +21,15 @@ This crate handles the complete pipeline from data generation to proof creation 
 
 The EZKL integration uses a model trained on synthetic data to predict credit scores for Ethereum addresses. This allows DeFi protocols to implement collateral tiers while maintaining user privacy.
 
+### EZKL Scaling Factor
+
+The system uses EZKL's scaling factor of 67219 to convert floating-point scores to integers for the zero-knowledge circuit:
+- Original ML model output: 0.0-1.0 range (e.g., 0.629)
+- Human-readable scale: 0-1000 range (e.g., 629)
+- EZKL proof public input: score * 67219 (e.g., 42,280,878)
+
+This scaling is required because ZK circuits work with integers, not floating-point numbers.
+
 ### Model Details
 
 The credit scoring model has the following characteristics:
@@ -146,20 +155,36 @@ If you've already generated the synthetic data and model, you can run the script
 
 ## Generated Artifacts
 
-The process generates the following files:
+The process generates the following files, organized by Ethereum address:
 
-- `credit_data.json`: Synthetic credit scoring data
-- `credit_model.json`: Trained model in JSON format
-- `input.json`: Sample input for EZKL
-- `settings.json`: EZKL circuit settings
-- `model.compiled`: Compiled circuit
-- `kzg.srs`: Structured Reference String
-- `vk.key`: Verification key
-- `pk.key`: Proving key
-- `witness.json`: Witness
-- `proof.json`: Zero-knowledge proof
-- `Halo2Verifier.sol`: Solidity verifier contract
-- `calldata.json`: Calldata for on-chain verification
+```
+proof_generation/
+├── <ethereum_address>/              # Address-specific directories
+│   ├── credit_model.onnx            # ONNX model
+│   ├── input.json                   # Model input
+│   ├── metadata.json                # Original and scaled scores
+│   ├── lookup.json                  # Original, scaled, and proof scores
+│   ├── proof.json                   # ZK proof
+│   ├── scaling_analysis.json        # EZKL scaling details
+│   ├── settings.json                # EZKL settings
+│   ├── witness.json                 # ZK witness
+│   ├── model.compiled               # Compiled circuit
+│   ├── pk.key                       # Proving key
+│   ├── vk.key                       # Verification key
+│   ├── kzg.srs                      # Structured Reference String
+│   └── calldata.json                # EVM calldata (medium tier only)
+├── credit_data.json                 # Generated synthetic data
+
+proof_registry/
+└── <ethereum_address>.json          # Proof registry entries with:
+                                     # - proof_hash
+                                     # - credit_score (EZKL scaled)
+                                     # - timestamp
+                                     # - model_version
+                                     # - address
+```
+
+The directory structure separates proofs by Ethereum address for better organization.
 
 ## Integration with Smart Contracts
 
