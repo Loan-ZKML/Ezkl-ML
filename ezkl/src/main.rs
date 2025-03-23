@@ -110,9 +110,6 @@ import torch.nn as nn
 from torch.onnx import export
 import time
 
-# Define features for credit score calculation
-favorable_features = {:?}  # [tx_count, wallet_age, avg_balance, repayment_history]
-
 # Define a simple model - linear with sigmoid
 class SimpleModel(nn.Module):
     def __init__(self):
@@ -137,6 +134,9 @@ class SimpleModel(nn.Module):
 # Create the model
 model = SimpleModel()
 model.eval()
+
+# Define features for credit score calculation
+favorable_features = {:?}  # [tx_count, wallet_age, avg_balance, repayment_history]
 
 # Calculate score
 input_tensor = torch.tensor([favorable_features], dtype=torch.float32)
