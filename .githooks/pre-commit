@@ -8,6 +8,16 @@ if [[ -z "$STAGED_FILES" ]]; then
   exit 0
 fi
 
+# Run clippy on the changed files:
+echo "Running cargo clippy..."
+cargo clippy --workspace --no-deps -- -D warnings
+
+# Check if cargo clippy found any warnings
+if [[ $? -ne 0 ]]; then
+  echo "❌ Commit aborted. Fix the clippy warnings above, stage the changes, and commit again."
+  exit 1
+fi
+
 # Run cargo fmt on staged files
 echo "Running cargo fmt on staged Rust files..."
 
