@@ -2,11 +2,11 @@ use anyhow::Result;
 use rand::thread_rng;
 use rand_distr::{Distribution, Normal, Uniform};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-use std::collections::HashMap;
 /// Sigmoid activation function that maps any real number to a value between 0 and 1
-/// 
+///
 /// Transforms inputs using the formula: f(x) = 1 / (1 + e^(-x))
 /// The function has a natural S-curve shape and smoothly maps all real inputs to [0, 1]
 /// Handles extreme values to prevent floating-point issues.
@@ -14,7 +14,7 @@ fn sigmoid(x: f32) -> Option<f32> {
     // Handle extreme values to avoid floating-point issues
     // Using a smaller threshold (10.0) to ensure more precise bounds for extreme values
     const EPSILON: f32 = 1e-6f32;
-    
+
     if !x.is_finite() {
         // Handle NaN and infinity
         None
@@ -45,9 +45,7 @@ fn validate_feature(x: f32) -> Option<f32> {
 /// Validates all features in a slice, ensuring each is valid
 /// Returns None if any feature is invalid
 fn validate_features(features: &[f32]) -> Option<Vec<f32>> {
-    features.iter()
-        .map(|&x| validate_feature(x))
-        .collect()
+    features.iter().map(|&x| validate_feature(x)).collect()
 }
 
 /// Calculates a weighted score from validated features
@@ -56,12 +54,15 @@ fn calculate_weighted_score(features: &[f32]) -> Option<f32> {
     if features.len() != 4 {
         return None;
     }
-    
+
     let weights = [0.3f32, 0.2f32, 0.2f32, 0.3f32];
-    Some(features.iter()
-        .zip(weights.iter())
-        .map(|(&f, &w)| f * w)
-        .sum())
+    Some(
+        features
+            .iter()
+            .zip(weights.iter())
+            .map(|(&f, &w)| f * w)
+            .sum(),
+    )
 }
 
 /// Processes noise to ensure it's within reasonable bounds
@@ -97,11 +98,13 @@ pub fn generate_synthetic_data(num_samples: usize) -> Result<CreditData> {
     // Generate features using iterators in a more compact way
     let features: Vec<Vec<f32>> = (0..num_samples)
         .map(|_| {
-            distributions.iter()
+            distributions
+                .iter()
                 .map(|(dist, normalizer)| {
                     let raw_value = dist.sample(&mut rng);
                     // For the last feature (repayment history), round to 0 or 1
-                    if normalizer == &1.0f32 {  // Just check the normalizer for repayment history
+                    if normalizer == &1.0f32 {
+                        // Just check the normalizer for repayment history
                         f32::round(raw_value)
                     } else {
                         raw_value / normalizer
@@ -113,9 +116,10 @@ pub fn generate_synthetic_data(num_samples: usize) -> Result<CreditData> {
 
     // Generate synthetic credit scores as a function of features with some noise
     let noise_dist = Normal::new(0.0f32, 0.05f32)?;
-    
+
     // Calculate scores using the new pure functions
-    let scores: Vec<f32> = features.iter()
+    let scores: Vec<f32> = features
+        .iter()
         .map(|feature| {
             let noise = noise_dist.sample(&mut rng);
             calculate_score(feature, noise)
@@ -128,7 +132,6 @@ pub fn generate_synthetic_data(num_samples: usize) -> Result<CreditData> {
         "avg_balance".to_string(),
         "repayment_history".to_string(),
     ];
-
 
     Ok(CreditData {
         features,
@@ -145,13 +148,13 @@ fn calculate_score(features: &[f32], noise: f32) -> f32 {
         .and_then(|valid_features| calculate_weighted_score(&valid_features))
         .and_then(|score| process_noise(noise).map(|n| score + n))
         .and_then(|combined| sigmoid(10.0f32 * combined - 5.0f32));
-    
+
     // Default score for invalid inputs
     result.unwrap_or(0.5f32)
 }
 
 /// Generates synthetic data with specific test addresses included
-/// 
+///
 /// This function is similar to `generate_synthetic_data` but adds specific test addresses
 /// with predetermined features to ensure they map to specific credit score tiers.
 /// This is useful for testing the collateral tier system.
@@ -178,7 +181,11 @@ pub fn generate_synthetic_data_with_test_addresses(num_samples: usize) -> Result
     add_address_to_data(&mut data, low_tier_address, low_tier_features)?;
     add_address_to_data(&mut data, medium_tier_address, medium_tier_features)?;
     add_address_to_data(&mut data, high_tier_address, high_tier_features)?;
-    add_address_to_data(&mut data, another_high_tier_address, another_high_tier_features)?;
+    add_address_to_data(
+        &mut data,
+        another_high_tier_address,
+        another_high_tier_features,
+    )?;
 
     Ok(data)
 }
@@ -187,29 +194,25 @@ pub fn generate_synthetic_data_with_test_addresses(num_samples: usize) -> Result
 ///
 /// This allows adding any number of addresses to the dataset with specific
 /// features that will result in desired credit scores.
-pub fn add_address_to_data(
-    data: &mut CreditData, 
-    address: &str, 
-    features: Vec<f32>
-) -> Result<()> {
+pub fn add_address_to_data(data: &mut CreditData, address: &str, features: Vec<f32>) -> Result<()> {
     // Ensure we have an address mapping
     if data.address_mapping.is_none() {
         data.address_mapping = Some(HashMap::new());
     }
-    
+
     // Calculate score for the features
     let score = calculate_score(&features, 0.0);
-    
+
     // Add to the dataset
     let index = data.features.len();
     data.features.push(features);
     data.scores.push(score);
-    
+
     // Update address mapping
     if let Some(ref mut mapping) = data.address_mapping {
         mapping.insert(address.to_string(), index);
     }
-    
+
     Ok(())
 }
 
@@ -223,9 +226,9 @@ pub fn save_data_as_json(data: &CreditData, path: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     /// Test module for verifying the functionality of the synthetic data generation module.
-    /// 
+    ///
     /// These tests ensure:
     /// 1. The sigmoid function behaves as expected with proper output range,
     ///    midpoint at 0, and symmetry properties.
@@ -238,15 +241,15 @@ mod tests {
         // Test output range (should always be between 0 and 1)
         assert!(sigmoid(-100.0f32).unwrap() > 0.0f32 && sigmoid(-100.0f32).unwrap() < 1.0f32);
         assert!(sigmoid(100.0f32).unwrap() > 0.0f32 && sigmoid(100.0f32).unwrap() < 1.0f32);
-        
+
         // Test extremes approach limits but never reach them
         let epsilon = 1e-6f32;
-        assert!(sigmoid(-100.0f32).unwrap() >= epsilon);  // Very close to 0 but not exactly 0
-        assert!(sigmoid(100.0f32).unwrap() <= 1.0f32 - epsilon);   // Very close to 1 but not exactly 1
-        
+        assert!(sigmoid(-100.0f32).unwrap() >= epsilon); // Very close to 0 but not exactly 0
+        assert!(sigmoid(100.0f32).unwrap() <= 1.0f32 - epsilon); // Very close to 1 but not exactly 1
+
         // Test midpoint property (f(0) = 0.5)
         assert!((sigmoid(0.0f32).unwrap() - 0.5f32).abs() < 1e-6f32);
-        
+
         // Test symmetry property (f(-x) = 1 - f(x))
         for x in [-5.0f32, -1.0f32, 0.0f32, 1.0f32, 5.0f32].iter() {
             assert!((sigmoid(-*x).unwrap() - (1.0f32 - sigmoid(*x).unwrap())).abs() < 1e-6f32);
@@ -257,7 +260,7 @@ mod tests {
         assert!(sigmoid(f32::INFINITY).is_none());
         assert!(sigmoid(f32::NEG_INFINITY).is_none());
     }
-    
+
     /// Tests credit score calculation with normal input values
     #[test]
     fn test_credit_score_normal_cases() {
@@ -265,23 +268,23 @@ mod tests {
         let low_features = [0.1f32, 0.2f32, 0.1f32, 0.0f32];
         let low_score = calculate_score(&low_features, 0.0f32);
         assert!(low_score < 0.4f32);
-        
+
         // Medium score features
         let medium_features = [0.5f32, 0.4f32, 0.5f32, 0.5f32];
         let medium_score = calculate_score(&medium_features, 0.0f32);
         assert!(medium_score >= 0.4f32 && medium_score <= 0.7f32);
-        
+
         // High score features
         let high_features = [0.9f32, 0.8f32, 0.7f32, 1.0f32];
         let high_score = calculate_score(&high_features, 0.0);
         assert!(high_score > 0.7);
-        
+
         // Verify that noise affects the score
         let score_with_noise = calculate_score(&medium_features, 0.2);
         let score_without_noise = calculate_score(&medium_features, 0.0);
         assert_ne!(score_with_noise, score_without_noise);
     }
-    
+
     /// Tests credit score calculation with edge cases
     #[test]
     fn test_credit_score_edge_cases() {
@@ -289,7 +292,7 @@ mod tests {
         let zero_features = [0.0, 0.0, 0.0, 0.0];
         let zero_score = calculate_score(&zero_features, 0.0);
         assert!(zero_score > 0.0);
-        
+
         // All ones (maximum possible features)
         let max_features = [1.0, 1.0, 1.0, 1.0];
         let max_score = calculate_score(&max_features, 0.0);
@@ -298,37 +301,37 @@ mod tests {
         let score_large_noise = calculate_score(&zero_features, 100.0);
         assert!(score_large_noise < 1.0);
         assert!(score_large_noise > 0.8); // Should be reasonably close to 1.0 but not exactly 1.0
-        
+
         // Very large negative noise shouldn't push score below 0.0
         let score_negative_noise = calculate_score(&max_features, -100.0);
         assert!(score_negative_noise > 0.0);
         assert!(score_negative_noise < 0.2); // Should be reasonably close to 0.0 but not exactly 0.0
-        
+
         // Test with non-finite noise
         let nan_score = calculate_score(&max_features, f32::NAN);
         assert!(nan_score.is_finite()); // Result should be finite even with NaN input
-        
+
         let inf_score = calculate_score(&max_features, f32::INFINITY);
         assert!(inf_score.is_finite()); // Result should be finite even with infinity input
         assert!(score_negative_noise > 0.0);
     }
-    
+
     /// Tests the generate_synthetic_data function
     #[test]
     fn test_generate_synthetic_data() {
         let num_samples = 10;
         let result = generate_synthetic_data(num_samples);
         assert!(result.is_ok());
-        
+
         let data = result.unwrap();
         assert_eq!(data.features.len(), num_samples);
         assert_eq!(data.scores.len(), num_samples);
-        
+
         // All scores should be in range [0, 1]
         for score in data.scores.iter() {
             assert!(*score >= 0.0 && *score <= 1.0);
         }
-        
+
         // Check dimensions of features
         for feature_vec in data.features.iter() {
             assert_eq!(feature_vec.len(), 4);

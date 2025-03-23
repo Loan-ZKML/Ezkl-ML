@@ -5,8 +5,8 @@
 use anyhow::Result;
 use std::path::Path;
 
-use synthetic_data::{generate_synthetic_data, save_data_as_json};
 use synthetic_data::model_trainer::CreditScoreModel;
+use synthetic_data::{generate_synthetic_data, save_data_as_json};
 
 fn main() -> Result<()> {
     // main provided for testing purposes.
@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     println!("EXAMPLE: Using synthetic_data library");
     println!("Note: This main() tests this library. In practice, use the ezkl crate.");
     println!("------------------------------------------------------------");
-    
+
     // Generate synthetic data
     println!("1. Generating synthetic credit data...");
     let data = generate_synthetic_data(1000)?;

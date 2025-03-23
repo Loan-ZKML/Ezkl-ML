@@ -1,6 +1,6 @@
-use anyhow::{Result, Context};
-use std::path::Path;
+use anyhow::{Context, Result};
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 /// Converts our JSON model to an ONNX format that EZKL can process
@@ -112,8 +112,7 @@ if __name__ == "__main__":
     convert_to_onnx(model_file, input_file, onnx_output, ezkl_input_output)
 "#;
 
-    fs::write(&script_path, python_script)
-        .context("Failed to write Python conversion script")?;
+    fs::write(&script_path, python_script).context("Failed to write Python conversion script")?;
 
     // Execute the Python script
     println!("Running Python script to convert model...");
@@ -127,7 +126,10 @@ if __name__ == "__main__":
         .context("Failed to execute Python script")?;
 
     if !status.success() {
-        return Err(anyhow::anyhow!("Python script failed with status: {}", status));
+        return Err(anyhow::anyhow!(
+            "Python script failed with status: {}",
+            status
+        ));
     }
 
     // Clean up the temporary script

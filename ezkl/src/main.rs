@@ -1,12 +1,12 @@
 mod direct_ezkl;
 mod onnx_converter;
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::fs;
-use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
 
 const CONTRACTS_SRC_PATH: &str = "../../contracts/src";
 const CONTRACTS_SCRIPT_PATH: &str = "../../contracts/script";
@@ -22,7 +22,7 @@ struct ProofMetadata {
 
 fn main() -> Result<()> {
     // Generate feature data for model
-    let features = vec![0.8, 0.7, 0.6, 1.0];  // [tx_count, wallet_age, avg_balance, repayment_history]
+    let features = vec![0.8, 0.7, 0.6, 1.0]; // [tx_count, wallet_age, avg_balance, repayment_history]
 
     // Create directory for artifacts
     fs::create_dir_all("proof_generation")?;
@@ -39,7 +39,10 @@ fn main() -> Result<()> {
         .context("Failed to execute Python script")?;
 
     if !status.success() {
-        return Err(anyhow::anyhow!("Model creation script failed with status: {}", status));
+        return Err(anyhow::anyhow!(
+            "Model creation script failed with status: {}",
+            status
+        ));
     }
 
     // Step 3: Generate proof with EZKL
@@ -61,7 +64,10 @@ fn main() -> Result<()> {
         .context("Failed to execute EZKL script")?;
 
     if !status.success() {
-        return Err(anyhow::anyhow!("EZKL script failed with status: {}", status));
+        return Err(anyhow::anyhow!(
+            "EZKL script failed with status: {}",
+            status
+        ));
     }
 
     // Step 4: Create proof registry for tracking
@@ -74,8 +80,14 @@ fn main() -> Result<()> {
     // Copy files
     fs::create_dir_all(CONTRACTS_SRC_PATH)?;
     fs::create_dir_all(CONTRACTS_SCRIPT_PATH)?;
-    fs::copy("proof_generation/Halo2Verifier.sol", format!("{}/Halo2Verifier.sol", CONTRACTS_SRC_PATH))?;
-    fs::copy("proof_generation/calldata.json", format!("{}/calldata.json", CONTRACTS_SCRIPT_PATH))?;
+    fs::copy(
+        "proof_generation/Halo2Verifier.sol",
+        format!("{}/Halo2Verifier.sol", CONTRACTS_SRC_PATH),
+    )?;
+    fs::copy(
+        "proof_generation/calldata.json",
+        format!("{}/calldata.json", CONTRACTS_SCRIPT_PATH),
+    )?;
 
     println!("Proof generation complete!");
     println!("Generated artifacts:");
@@ -89,7 +101,8 @@ fn main() -> Result<()> {
 }
 
 fn create_model_script(features: &[f32]) -> Result<()> {
-    let script = format!(r#"
+    let script = format!(
+        r#"
 import json
 import numpy as np
 import torch
@@ -174,7 +187,9 @@ with open("proof_generation/metadata.json", "w") as f:
     json.dump(metadata, f, indent=2)
 
 print("Model converted to ONNX and input prepared for EZKL")
-"#, features);
+"#,
+        features
+    );
 
     fs::write("create_model.py", script)?;
     Ok(())
@@ -265,7 +280,9 @@ fn create_proof_registry() -> Result<()> {
         // We need to take the first 4 characters (after 0x) which represent our score
         let score_hex = &output_hex[0..4]; // Take first 4 characters
         u32::from_str_radix(score_hex, 16).unwrap_or(0)
-    } else if let Some(rescaled_output) = witness["pretty_elements"]["rescaled_outputs"][0][0].as_str() {
+    } else if let Some(rescaled_output) =
+        witness["pretty_elements"]["rescaled_outputs"][0][0].as_str()
+    {
         // If the pretty_elements path exists and contains a string, parse it
         let float_val = rescaled_output.parse::<f64>().unwrap_or(0.0);
         (float_val * SCORE_SCALER).round() as u32
@@ -292,7 +309,10 @@ fn create_proof_registry() -> Result<()> {
 
     // Save registry entry
     let registry_path = format!("proof_registry/{}.json", registry_entry.proof_hash);
-    fs::write(&registry_path, serde_json::to_string_pretty(&registry_entry)?)?;
+    fs::write(
+        &registry_path,
+        serde_json::to_string_pretty(&registry_entry)?,
+    )?;
 
     // Create lookup file for testing
     let lookup = serde_json::json!({
@@ -301,9 +321,15 @@ fn create_proof_registry() -> Result<()> {
         "public_input": format!("0x{:x}", registry_entry.credit_score),
     });
 
-    fs::write("script/proof_lookup.json", serde_json::to_string_pretty(&lookup)?)?;
+    fs::write(
+        "script/proof_lookup.json",
+        serde_json::to_string_pretty(&lookup)?,
+    )?;
 
-    println!("Created proof registry with hash: {}", registry_entry.proof_hash);
+    println!(
+        "Created proof registry with hash: {}",
+        registry_entry.proof_hash
+    );
 
     Ok(())
 }
