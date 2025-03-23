@@ -21,7 +21,6 @@ synthetic_data/example_*.json
 
 # Generated EZKL artifacts
 ezkl/calldata.json
-ezkl/create_model.py
 ezkl/credit_data.json
 ezkl/credit_model.json
 ezkl/credit_model.onnx

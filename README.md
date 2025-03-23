@@ -123,11 +123,36 @@ pip install torch numpy onnx
 
 ### Usage
 
+#### Model Training And Export To ONNX Format - Done By Developers
+
+This is currently trained using a very specific tuple of data:
+
+`[0.8, 0.7, 0.6, 1.0]; // [tx_count, wallet_age, avg_balance, repayment_history]`.
+
+If this was a production system/model we would have required many more training data to train our model.
+
+The script that does that is the [./ezkl/create_model.py](./ezkl/create_model.py)
+
+You have to execute it like this:
+
+````bash
+$ cd ezkl
+ ezkl $ python create_model.py
+
 ```bash
 # Run the complete pipeline from data generation to ZK proof creation
 cd ezkl
 cargo run
-```
+````
+
+This generates the following output:
+
+- [./ezkl/proof_generation/credit_model.onnx](./ezkl/proof_generation/credit_model.onnx), which is the trained model in ONNX format
+- [./ezkl/proof_generation/input.json](./ezkl/proof_generation/input.json), which is the input data and the output used for
+  training
+- [./ezkl/proof generation/metadata.json](./ezkl/proof_generation/metadata.json), which contains some metadata for future reference.
+
+#### TO BE REVIEWED ....
 
 The `ezkl` crate serves as the main entry point for the application, internally using the `synthetic_data` library to:
 
