@@ -20,23 +20,24 @@ synthetic_data/input.json
 synthetic_data/example_*.json
 
 # Generated EZKL artifacts
+ezkl/calldata.json
 ezkl/credit_data.json
 ezkl/credit_model.json
-ezkl/input.json
 ezkl/credit_model.onnx
 ezkl/ezkl_input.json
-ezkl/settings.json
-ezkl/model.compiled
+ezkl/input.json
 ezkl/kzg.srs
-ezkl/vk.key
+ezkl/model.compiled
 ezkl/pk.key
-ezkl/witness.json
-ezkl/proof.json
-ezkl/calldata.json
 ezkl/proof_generation
+ezkl/proof.json
+ezkl/run_ezkl.sh
+ezkl/settings.json
 ezkl/sol_build
 ezkl/updated*.json
 ezkl/verifier_abi.json
+ezkl/vk.key
+ezkl/witness.json
 
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
