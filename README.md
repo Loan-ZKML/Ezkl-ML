@@ -5,7 +5,15 @@
 This project implements a privacy-preserving credit scoring system for DeFi loans using zero-knowledge (Halo2) machine learning (ZKML).
 It combines the ML creation and synthetic historical loan transaction history training with Ethereum [Loan-ZKML/contracts](https://github.com/Loan-ZKML/contracts) Loan smart contracts to verify the ML computations that result in discounted loan collateral requirements.
 
+## Note on 3rd-Party Development Tools
+
+Look at the file [./.tool-versions](./.tool-versions) to find out which 3rd-party development tools we are using.
+Make sure that you have the corresponding tools and versions installed and used by your working shell.
+
+You may want to use [asdf](https://asdf-vm.com/) to manage different versions of these tools.
+
 ## Use case
+
 Users with favorable on-chain loan transaction history generate ZK proofs using public inputs demonstrating their creditworthiness without revealing their private financial data.
 
 - **synthetic_data**: Library that provides synthetic credit data generation and model training
