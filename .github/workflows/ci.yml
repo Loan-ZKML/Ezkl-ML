@@ -2,9 +2,12 @@ name: Rust CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "**" ]
+    branches:
+      - main
+    types: [ready_for_review, opened, reopened, synchronize]
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,7 +30,7 @@ jobs:
           ${{ runner.os }}-cargo-
     - name: Build
       run: cargo build --verbose --workspace
-      
+
   test:
     name: Test
     runs-on: ubuntu-latest
