@@ -30,6 +30,16 @@ If you use VS Code, we highly recommend the extension [rust-analyzer](https://ma
   ...
 ```
 
+## Local Development Setup
+
+### git pre-commit hooks
+
+Make sure you run this command on your local copy of the repository:
+
+```bash
+$ git config core.hooksPath .githooks
+```
+
 ## Use case
 
 Users with favorable on-chain loan transaction history generate ZK proofs using public inputs demonstrating their creditworthiness without revealing their private financial data.
