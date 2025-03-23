@@ -5,14 +5,16 @@
 This project implements a privacy-preserving credit scoring system for DeFi loans using zero-knowledge (Halo2) machine learning (ZKML).
 It combines the ML creation and synthetic historical loan transaction history training with Ethereum [Loan-ZKML/contracts](https://github.com/Loan-ZKML/contracts) Loan smart contracts to verify the ML computations that result in discounted loan collateral requirements.
 
-## Note on 3rd-Party Development Tools
+## Development Setup
+
+### Note on 3rd-Party Development Tools
 
 Look at the file [./.tool-versions](./.tool-versions) to find out which 3rd-party development tools we are using.
 Make sure that you have the corresponding tools and versions installed and used by your working shell.
 
 You may want to use [asdf](https://asdf-vm.com/) to manage different versions of these tools.
 
-## Rust Development Setup
+### Rust Development Setup
 
 You should install the version of Rust specified inside the [./.tool-versions](./.tool-versions) file.
 
@@ -30,7 +32,12 @@ If you use VS Code, we highly recommend the extension [rust-analyzer](https://ma
   ...
 ```
 
-## Local Development Setup
+### JavaScript and JSON Formatting
+
+If you work with VS Code install the extension [Prettier - Code Formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode). There is an empty configurations file in root folder that uses the default formatting
+of the tool [Prettier](https://prettier.io). This extension will format on save your JavaScript/Typescript/JSON files.
+
+If you don't use VS Code extension make sure that you use the out-of-the-box prettify rules that come with Prettier.
 
 ### git pre-commit hooks
 
@@ -53,7 +60,7 @@ Users with favorable on-chain loan transaction history generate ZK proofs using 
 1. Generate synthetic credit data and train a credit scoring model
 2. Convert the model to ONNX format compatible with EZKL
 3. Use EZKL to create zero-knowledge circuits and proofs
-4. Generate a Solidity [verifier](https://github.com/Loan-ZKML/contracts/blob/39f2a849f0a502cd2dc19422fc579e98e03e3f41/src/ZKCreditVerifier.sol#L43) contract  for on-chain verification
+4. Generate a Solidity [verifier](https://github.com/Loan-ZKML/contracts/blob/39f2a849f0a502cd2dc19422fc579e98e03e3f41/src/ZKCreditVerifier.sol#L43) contract for on-chain verification
 5. Allow users to submit proofs to DeFi lending platforms for better loan terms
 
 ### Core Components
@@ -123,6 +130,7 @@ cargo run
 ```
 
 The `ezkl` crate serves as the main entry point for the application, internally using the `synthetic_data` library to:
+
 1. Generate synthetic credit data
 2. Train the ML model
 3. Save model and sample input files
