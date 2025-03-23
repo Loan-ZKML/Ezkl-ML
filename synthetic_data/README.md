@@ -27,6 +27,22 @@ score = 0.3 * tx_count + 0.2 * wallet_age + 0.2 * avg_balance + 0.3 * repayment_
 
 The final score is clamped to the 0-1 range, where 0 represents the lowest credit quality and 1 represents the highest.
 
+### EZKL Scaling for Zero-Knowledge Proofs
+
+For zero-knowledge proof generation, the credit score undergoes two scaling transformations:
+
+1. **Human-readable scaling**: The 0-1 range score is multiplied by 1000 for better readability:
+   ```
+   scaled_score = score * 1000  // e.g., 0.629 → 629
+   ```
+
+2. **EZKL circuit scaling**: The scaled score is multiplied by EZKL's scaling factor (67219) for the ZK circuit:
+   ```
+   proof_public_input = scaled_score * 67219  // e.g., 629 * 67219 ≈ 42,280,878
+   ```
+
+This double scaling allows for both human-readable scores (0-1000) and the integer precision needed for the ZK circuit.
+
 ## Model Training
 
 The system trains a simple linear regression model with the following characteristics:
@@ -55,9 +71,9 @@ For testing purposes, you should use the following strategies:
 When using addresses that are part of the training data:
 
 - For UNKNOWN tier (120% collateral): Use any new address not in the training set, e.g., `0x1111111111111111111111111111111111111111`
-- For LOW tier (100% collateral): Use `0x2222222222222222222222222222222222222222`
-- For MEDIUM tier (90% collateral): Use `0x276ef71c8F12508d187E7D8Fcc2FE6A38a5884B1` (prv-key: `0x08c216a5cbe31fd3c8095aae062a101c47c0f6110d738b97c5b1572993a2e665`)
-- For HIGH tier (80% collateral): Use `0x4444444444444444444444444444444444444444`
+- For LOW tier (100% collateral): Use `0x2222222222222222222222222222222222222222` (score ≈ 0.09 → 90 → 6,049,710)
+- For MEDIUM tier (90% collateral): Use `0x276ef71c8F12508d187E7D8Fcc2FE6A38a5884B1` (score ≈ 0.63 → 629 → 42,280,878)
+- For HIGH tier (80% collateral): Use `0x4444444444444444444444444444444444444444` (score ≈ 0.86 → 860 → 57,808,340)
 
 ### Testing Approach
 

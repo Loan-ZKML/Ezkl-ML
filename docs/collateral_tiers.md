@@ -17,6 +17,35 @@ The system implements four distinct collateral tiers based on credit scores:
 | MEDIUM | 0.4 - 0.7 | 90% | Users with moderate credit history and scores |
 | HIGH | > 0.7 | 80% | Users with excellent credit history and scores |
 
+## EZKL Scaling and Test Results
+
+### EZKL Scaling Information
+
+When implementing credit scores in zero-knowledge proofs using EZKL, we must account for scaling factors:
+
+1. **Original ML Model Output**: Scores range from 0.0 to 1.0 (floating-point values)
+2. **Human-Readable Scale**: We multiply by 1000 to get scores from 0 to 1000 (integers)
+3. **EZKL Circuit Scale**: EZKL applies an additional scaling factor (approximately 67219) for fixed-point arithmetic in the circuit
+
+This means a score goes through the following transformations:
+- Original score: e.g., 0.629 (from ML model)
+- Human-readable score: 629 (0.629 × 1000)
+- EZKL circuit value: 42,280,878 (629 × 67219)
+
+The smart contract then descales the EZKL circuit value back to the human-readable range (0-1000) for tier assignment.
+
+### Actual Test Scores
+
+Our test addresses show the following credit scores:
+
+| Address | Original Score | Human-Readable Score (0-1000) | EZKL Circuit Value | Tier |
+|---------|----------------|-------------------------------|-------------------|------|
+| 0x2222222222222222222222222222222222222222 | 0.09 | 90 | ~6,049,710 | LOW |
+| 0x276ef71c8F12508d187E7D8Fcc2FE6A38a5884B1 | 0.63 | 629 | 42,280,878 | MEDIUM |
+| 0x4444444444444444444444444444444444444444 | 0.86 | 860 | ~57,808,340 | HIGH |
+
+These test scores allow us to validate the entire pipeline from ML model to smart contract verification, ensuring each address qualifies for the appropriate collateral tier.
+
 ## Ethereum Address Strategy for Testing
 
 ### Test Address Convention
@@ -154,6 +183,9 @@ contract CollateralCalculator is ICollateralCalculator {
         require(_proofValidated, "Invalid proof");
         
         // Determine tier based on credit score
+        // Note: _creditScore is the descaled value (0-1000 range)
+        // It has been converted from the EZKL circuit value using:
+        // descaled_score = ezkl_raw_score / 67219
         CreditTier newTier;
         if (_creditScore < 400) {         // < 0.4
             newTier = CreditTier.LOW;
@@ -182,10 +214,10 @@ contract CollateralCalculator is ICollateralCalculator {
 3. **Generate Proofs**: Create ZK proofs for each test address:
    - For the HIGH tier address, create a proof of a credit score > 0.7
    - For the MEDIUM tier address, create a proof of a credit score between 0.4 and 0.7
-   - For the LOW tier address, create a proof of a credit score < 0.4
+   - For the HIGH tier address (0x4444...), create a proof of a credit score > 0.7 (actual: 0.86)
+   - For the MEDIUM tier address (0x276e...), create a proof of a credit score between 0.4 and 0.7 (actual: 0.63)
+   - For the LOW tier address (0x2222...), create a proof of a credit score < 0.4 (actual: 0.09)
    - For the UNKNOWN tier test, use an address not in the training data
-
-4. **Verify Collateral Calculation**: Test the smart contract's collateral calculations for each test address.
 
 ### Unknown User Testing
 

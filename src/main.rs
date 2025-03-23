@@ -1,7 +1,6 @@
 use std::path::PathBuf;
-
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -11,11 +10,6 @@ struct Cli {
     /// Sets a custom config file
     #[arg(short, value_name = "FILE")]
     config: Option<PathBuf>,
-
-    /// Turn debugging information on
-    #[arg(short, action = clap::ArgAction::Count)]
-    debug: u8,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -28,7 +22,7 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     println!("Address: {}", cli.address);
@@ -37,16 +31,12 @@ fn main() {
         println!("Value for config: {}", config_path.display());
     }
 
-    // You can check for the existence of subcommands, and if found use their
-    // matches just as you would the top level cmd
-    match &cli.command {
-        Some(Commands::Test { list }) => {
-            if *list {
-                println!("Printing testing lists...");
-            } else {
-                println!("Not printing testing lists...");
-            }
+    if let Some(Commands::Test { list }) = cli.command {
+        if list {
+            // Here you would implement actual test listing functionality
+            println!("Test command executed with list flag enabled");
         }
-        None => {}
     }
+
+    Ok(())
 }

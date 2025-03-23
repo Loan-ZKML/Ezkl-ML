@@ -1,85 +1,126 @@
-
 import json
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.onnx import export
 import time
+import sys
+import os
 
-# Define features for credit score calculation
-favorable_features = [0.8, 0.7, 0.6, 1.0]  # [tx_count, wallet_age, avg_balance, repayment_history]
+# Get and validate command line arguments
+if len(sys.argv) < 4:
+    print("Usage: python3 create_model.py <output_dir> <address> <features>")
+    sys.exit(1)
 
-# Define a simple model - linear with sigmoid
-class SimpleModel(nn.Module):
+output_dir = sys.argv[1]
+address = sys.argv[2]
+try:
+    features = json.loads(sys.argv[3])
+    if not isinstance(features, list) or len(features) != 4:
+        raise ValueError("Features must be a list of 4 numbers")
+except json.JSONDecodeError:
+    print("Error: Features must be a valid JSON array")
+    sys.exit(1)
+except ValueError as e:
+    print(f"Error: {e}")
+    sys.exit(1)
+
+# Use output directory directly without creating an additional subdirectory
+os.makedirs(output_dir, exist_ok=True)
+
+# Define a model that uses linear scaling instead of sigmoid
+class LinearCreditScoreModel(nn.Module):
     def __init__(self):
-        super(SimpleModel, self).__init__()
-        # Simple linear model with sigmoid activation
-        self.linear = nn.Linear(4, 1)
-
-        # Set weights directly - this is a simplified version of the model
-        # We use weights that match a simple credit scoring formula
-        weight = torch.tensor([[0.3, 0.2, 0.2, 0.3]]).float()
-        self.linear.weight.data = weight
-        self.linear.bias.data = torch.tensor([0.0])
-
-        # Sigmoid to normalize output between 0 and 1
-        self.sigmoid = nn.Sigmoid()
-
+        super(LinearCreditScoreModel, self).__init__()
+        # Define weights for credit scoring features
+        self.weights = nn.Parameter(torch.tensor([[0.25, 0.20, 0.25, 0.30]]).float())
+        self.bias = nn.Parameter(torch.tensor([0.0]))
+        
     def forward(self, x):
-        x = self.linear(x)
-        x = self.sigmoid(x)
-        return x
+        # Linear combination of features
+        raw_score = torch.matmul(x, self.weights.t()) + self.bias
+        scaled_score = torch.clamp(raw_score, 0.0, 1.0)
+        return scaled_score
 
 # Create the model
-model = SimpleModel()
+model = LinearCreditScoreModel()
 model.eval()
 
 # Calculate score
-input_tensor = torch.tensor([favorable_features], dtype=torch.float32)
+input_tensor = torch.tensor([features], dtype=torch.float32)
 with torch.no_grad():
     score = model(input_tensor).item()
 
-print(f"Features: {favorable_features}")
+print(f"Address: {address}")
+print(f"Features: {features}")
 print(f"Calculated score: {score:.4f}")
+
+# Calculate tier based on score
+if score < 0.4:
+    tier = "LOW"
+elif score < 0.7:
+    tier = "MEDIUM"
+else:
+    tier = "HIGH"
+
+print(f"Credit tier: {tier}")
 print(f"Threshold for favorable rate: 0.5")
 print(f"Qualifies for favorable rate (100% collateral): {score > 0.5}")
 
 # Export to ONNX
+model_path = os.path.join(output_dir, "credit_model.onnx")
 export(
     model,
     input_tensor,
-    "proof_generation/credit_model.onnx",
+    model_path,
     input_names=["input"],
     output_names=["output"],
     dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
 )
 
-# Create EZKL input
-# Scale the score to be between 0-1000 for easier integer comparison in smart contracts
+# Use direct scaling to avoid potential EZKL quirks
 scaled_score = int(score * 1000)
 print(f"Scaled score (0-1000): {scaled_score}")
 
+# For EZKL input
 ezkl_input = {
-  "input_shapes": [[4]],
-  "input_data": [favorable_features],
-  # This is important - we include the scaled score as a public output
-  # This will become a public input to the verification system
-  "output_data": [[scaled_score / 1000.0]]
+    "input_shapes": [[4]],
+    "input_data": [features],
+    "output_data": [[score]],
+    "public_output_idxs": [[0, 0]]
 }
 
-with open("proof_generation/input.json", "w") as f:
+input_path = os.path.join(output_dir, "input.json")
+with open(input_path, "w") as f:
     json.dump(ezkl_input, f, indent=2)
 
-# Also save metadata for later reference
+# Save debug file
+debug_info = {
+    "address": address,
+    "features": features,
+    "original_score": score,
+    "scaled_score": scaled_score,
+    "credit_tier": tier,
+    "favorable_rate_eligible": score > 0.5,
+    "timestamp": int(time.time())
+}
+
+debug_path = os.path.join(output_dir, "scaling_debug.json")
+with open(debug_path, "w") as f:
+    json.dump(debug_info, f, indent=2)
+
+# Save metadata
 metadata = {
-    "features": favorable_features,
+    "address": address,
+    "features": features,
     "score": score,
     "scaled_score": scaled_score,
     "timestamp": int(time.time()),
     "model_version": "1.0.0"
 }
 
-with open("proof_generation/metadata.json", "w") as f:
+metadata_path = os.path.join(output_dir, "metadata.json")
+with open(metadata_path, "w") as f:
     json.dump(metadata, f, indent=2)
 
-print("Model converted to ONNX and input prepared for EZKL")
+print(f"Model converted to ONNX and input prepared for EZKL in {output_dir}")

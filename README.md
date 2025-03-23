@@ -93,11 +93,13 @@ pip install torch numpy onnx
 cd ezkl
 cargo run
 ```
-
 The `ezkl` crate serves as the main entry point for the application, internally using the `synthetic_data` library to:
 1. Generate synthetic credit data
 2. Train the ML model
 3. Save model and sample input files
+4. Process everything with the EZKL CLI to create ZK proofs
+
+The system uses EZKL's scaling factor of 67219 to convert the floating-point credit scores (0.0-1.0) to integers for the zero-knowledge proof circuit. For example, a credit score of 0.63 becomes 42,280,878 in the ZK proof.
 4. Process everything with the EZKL CLI to create ZK proofs
 
 ## Generated Artifacts
@@ -107,6 +109,23 @@ This project generates various data files and artifacts during execution, which 
 - Model files: JSON and ONNX formats of the credit scoring model
 - ZK artifacts: Proofs, keys, witness, and compiled circuits
 - Solidity contracts: Generated verifier for on-chain verification
+
+The generated files are organized as follows:
+```
+proof_generation/
+├── <ethereum_address>/              # Address-specific directories
+│   ├── credit_model.onnx            # ONNX model
+│   ├── input.json                   # Model input
+│   ├── metadata.json                # Original and scaled scores
+│   ├── proof.json                   # ZK proof
+│   ├── scaling_analysis.json        # EZKL scaling details
+│   ├── settings.json                # EZKL settings
+│   ├── witness.json                 # ZK witness
+│   └── calldata.json                # EVM calldata (medium tier only)
+├── credit_data.json                 # Generated synthetic data
+proof_registry/
+└── <ethereum_address>.json          # Proof registry entries
+```
 
 See the .gitignore file for the complete list of untracked generated files.
 
