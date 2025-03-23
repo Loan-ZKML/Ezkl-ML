@@ -12,6 +12,24 @@ Make sure that you have the corresponding tools and versions installed and used 
 
 You may want to use [asdf](https://asdf-vm.com/) to manage different versions of these tools.
 
+## Rust Development Setup
+
+You should install the version of Rust specified inside the [./.tool-versions](./.tool-versions) file.
+
+In order to make sure that Rust source code files are properly and uniformly formatted across all developers' workspaces, you should make sure that
+`cargo fmt` runs on the files you change/edit/create.
+
+If you use VS Code, we highly recommend the extension [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer). Make sure that you also have _format on save_ enabled. This is what it needs to be in your VS Code settings:
+
+```json
+  ...
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+  ...
+```
+
 ## Use case
 
 Users with favorable on-chain loan transaction history generate ZK proofs using public inputs demonstrating their creditworthiness without revealing their private financial data.
