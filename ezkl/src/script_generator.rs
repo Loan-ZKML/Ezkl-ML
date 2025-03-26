@@ -101,7 +101,7 @@ pub fn create_address_input(features: &[f32], address: &str, output_dir: &str) -
     
     // Call Python script to generate input only (no model generation)
     let status = Command::new("python3")
-        .arg("create_model.py")
+        .arg("./script/create_model.py")
         .arg(output_dir)
         .arg(address)
         .arg(&features_json)
@@ -123,7 +123,7 @@ fn create_model(features: &[f32], address: &str, output_dir: &str, force_generat
     
     // Call Python script to generate model
     let status = Command::new("python3")
-        .arg("create_model.py")
+        .arg("./script/create_model.py")
         .arg(output_dir)
         .arg(address)
         .arg(&features_json)
@@ -150,73 +150,21 @@ pub fn create_ezkl_script(script_path: &Path, working_dir: &str, generate_contra
     let model_path_abs = fs::canonicalize(&model_path)?;
     let srs_path_abs = fs::canonicalize(Path::new(PROOF_GEN_DIR).join(SRS_FILE))?;
 
-    // Convert paths to strings
     let working_dir_str = working_dir_abs.to_string_lossy().into_owned();
     let model_path_str = model_path_abs.to_string_lossy().into_owned();
     let srs_path_str = srs_path_abs.to_string_lossy().into_owned();
 
-    println!("Using shared model at: {}", model_path_str);
-    println!("Using SRS file at: {}", srs_path_str);
-    println!("Working directory: {}", working_dir_str);
-
-    // Create the EZKL script with absolute paths
+    // Create a launcher bash script that calls the new Python script
+    // Assumes the Python script is at /Users/mar/src/github.com/loan-zkml/ezkl/scripts/run_ezkl.py
     let mut script = format!(r#"#!/usr/bin/env bash
-set -e
-
-# Change to working directory where files are located
-cd "{}"
-
-# Check if EZKL is installed
-if ! command -v ezkl &> /dev/null; then
-    echo "EZKL not found. Please install it with: pip install ezkl"
-    exit 1
-fi
-
-# Step 1: Generate settings
-echo "Generating circuit settings..."
-ezkl gen-settings -M "{}" -O settings.json
-
-# Step 2: Calibrate settings
-echo "Calibrating settings..."
-ezkl calibrate-settings -M "{}" -D input.json -O settings.json
-
-# Step 3: Compile model to circuit
-echo "Compiling model to circuit..."
-ezkl compile-circuit -M "{}" --compiled-circuit model.compiled -S settings.json
-
-# Step 4: Generate keys
-echo "Running setup to generate keys..."
-ezkl setup -M model.compiled --pk-path pk.key --vk-path vk.key --srs-path "{}"
-
-# Step 5: Generate witness
-echo "Generating witness..."
-ezkl gen-witness -D input.json -M model.compiled -O witness.json
-
-# Step 6: Generate proof
-echo "Generating proof..."
-ezkl prove --witness witness.json --proof-path proof.json --pk-path pk.key --compiled-circuit model.compiled --srs-path "{}"
-
-# Step 7: Verify the proof locally
-echo "Verifying proof locally..."
-ezkl verify --proof-path proof.json --vk-path vk.key --srs-path "{}""#, 
-working_dir_str, model_path_str, model_path_str, model_path_str, srs_path_str, srs_path_str, srs_path_str);
-
+python3 ./script/run_ezkl.py --working-dir "{}" --model-path "{}" --srs-path "{}""#,
+        working_dir_str, model_path_str, srs_path_str);
+    
     if generate_contract {
-        script.push_str(&format!(r#"
-
-# Step 8: Generate Solidity verifier contract
-echo "Generating Solidity verifier contract..."
-ezkl create-evm-verifier --vk-path vk.key --sol-code-path Halo2Verifier.sol --srs-path "{}"
-
-# Step 9: Generate calldata for on-chain verification
-echo "Generating calldata for on-chain verification..."
-ezkl encode-evm-calldata --proof-path proof.json --calldata-path calldata.json"#, srs_path_str));
+        script.push_str(" --generate-contract");
     }
-
-    script.push_str(r#"
-
-echo "EZKL processing complete!"
-"#);
+    
+    script.push_str("\n");
 
     fs::write(script_path, script)?;
     
@@ -230,3 +178,4 @@ echo "EZKL processing complete!"
     
     Ok(())
 }
+

@@ -72,7 +72,7 @@ fn main() -> Result<()> {
             .arg(&script_path)
             .status()
             .context("Failed to execute EZKL script")?;
-
+        
         if !status.success() {
             return Err(anyhow::anyhow!("EZKL script failed with status: {}", status));
         }
