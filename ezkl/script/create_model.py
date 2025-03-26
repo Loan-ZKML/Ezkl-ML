@@ -8,14 +8,16 @@ import sys
 import os
 
 # Get and validate command line arguments
-if len(sys.argv) < 4:
-    print("Usage: python3 create_model.py <output_dir> <address> <features>")
+if len(sys.argv) < 5:
+    print("Usage: python3 ./script/create_model.py <output_dir> <address> <features> <generate_model_flag>")
+    print("where generate_model_flag is 1 to generate model or 0 to skip model generation")
     sys.exit(1)
 
 output_dir = sys.argv[1]
 address = sys.argv[2]
 try:
     features = json.loads(sys.argv[3])
+    generate_model = sys.argv[4] == "1"
     if not isinstance(features, list) or len(features) != 4:
         raise ValueError("Features must be a list of 4 numbers")
 except json.JSONDecodeError:
@@ -67,16 +69,20 @@ print(f"Credit tier: {tier}")
 print(f"Threshold for favorable rate: 0.5")
 print(f"Qualifies for favorable rate (100% collateral): {score > 0.5}")
 
-# Export to ONNX
+# Export to ONNX only if the flag is set to 1
 model_path = os.path.join(output_dir, "credit_model.onnx")
-export(
-    model,
-    input_tensor,
-    model_path,
-    input_names=["input"],
-    output_names=["output"],
-    dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
-)
+if generate_model:
+    print(f"Generating model file: {model_path}")
+    export(
+        model,
+        input_tensor,
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}}
+    )
+else:
+    print("Skipping model generation as per flag")
 
 # Use direct scaling to avoid potential EZKL quirks
 scaled_score = int(score * 1000)
@@ -123,4 +129,7 @@ metadata_path = os.path.join(output_dir, "metadata.json")
 with open(metadata_path, "w") as f:
     json.dump(metadata, f, indent=2)
 
-print(f"Model converted to ONNX and input prepared for EZKL in {output_dir}")
+if generate_model:
+    print(f"Model converted to ONNX and input prepared for EZKL in {output_dir}")
+else:
+    print(f"Input prepared for EZKL in {output_dir}")

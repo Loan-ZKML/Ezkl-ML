@@ -1,6 +1,7 @@
 use anyhow::{Result, Context};
 use std::fs;
 use std::path::Path;
+
 /// Creates a proof registry entry for the given address
 /// Returns a boolean indicating success
 pub fn create_proof_registry(address: &str, proof_dir: &str) -> Result<bool, anyhow::Error> {
