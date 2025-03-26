@@ -73,9 +73,13 @@ fn main() -> Result<()> {
 
         // Create proof registry entry
         println!("Creating proof registry entry...");
-        let proof_hash = create_proof_registry(address, &address_dir)?;
+        let proof_registered = create_proof_registry(address, &address_dir)?;
 
-        println!("Processed proof for address: {}, {}", address, proof_hash);
+        if proof_registered {
+            println!("Successfully registered proof for address: {}", address);
+        } else {
+            println!("Failed to register proof for address: {}", address);
+        }
     }
 
     // Step 3: Copy artifacts for medium tier address only

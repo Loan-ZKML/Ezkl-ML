@@ -3,9 +3,16 @@ use std::path::Path;
 use std::process::Command;
 use std::fs;
 
-pub fn create_model_script(features: &[f32], address: &str, output_dir: &str) -> Result<()> {
+pub fn create_model_script(features: &[f32], address: &str, output_dir: &str) -> Result<(), anyhow::Error> {
     println!("Address: {}", address);
     println!("Features: {:?}", features);
+
+    // Check if the common model already exists in the output directory
+    let model_path = format!("{}/credit_model.onnx", output_dir);
+    if std::path::Path::new(&model_path).exists() {
+        println!("Common model already exists at {}. Reusing common model.", model_path);
+        return Ok(());
+    }
 
     // Convert features to JSON string
     let features_json = serde_json::to_string(features)?;
