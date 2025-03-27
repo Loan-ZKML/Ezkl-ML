@@ -27,25 +27,26 @@ except ValueError as e:
     print(f"Error: {e}")
     sys.exit(1)
 
-# Use output directory directly without creating an additional subdirectory
 os.makedirs(output_dir, exist_ok=True)
 
-# Define a model that uses linear scaling instead of sigmoid
-class LinearCreditScoreModel(nn.Module):
+# Define model that matches Rust implementation
+class CreditScoreModel(nn.Module):
     def __init__(self):
-        super(LinearCreditScoreModel, self).__init__()
-        # Define weights for credit scoring features
-        self.weights = nn.Parameter(torch.tensor([[0.25, 0.20, 0.25, 0.30]]).float())
-        self.bias = nn.Parameter(torch.tensor([0.0]))
+        super(CreditScoreModel, self).__init__()
+        # Match Rust weights [0.3, 0.2, 0.2, 0.3]
+        self.weights = nn.Parameter(torch.tensor([[0.3, 0.2, 0.2, 0.3]]).float())
         
     def forward(self, x):
         # Linear combination of features
-        raw_score = torch.matmul(x, self.weights.t()) + self.bias
-        scaled_score = torch.clamp(raw_score, 0.0, 1.0)
+        raw_score = torch.matmul(x, self.weights.t())
+        # Apply the same transformation as Rust: sigmoid(10.0 * x - 5.0)
+        # Fix the order of operations to match Rust
+        scaled_input = 10.0 * raw_score - 5.0
+        scaled_score = 1.0 / (1.0 + torch.exp(-scaled_input))
         return scaled_score
 
-# Create the model
-model = LinearCreditScoreModel()
+# Create and evaluate model
+model = CreditScoreModel()
 model.eval()
 
 # Calculate score
@@ -69,7 +70,7 @@ print(f"Credit tier: {tier}")
 print(f"Threshold for favorable rate: 0.5")
 print(f"Qualifies for favorable rate (100% collateral): {score > 0.5}")
 
-# Export to ONNX only if the flag is set to 1
+# Export to ONNX if requested
 model_path = os.path.join(output_dir, "credit_model.onnx")
 if generate_model:
     print(f"Generating model file: {model_path}")
@@ -84,11 +85,11 @@ if generate_model:
 else:
     print("Skipping model generation as per flag")
 
-# Use direct scaling to avoid potential EZKL quirks
+# Scale score for EZKL (0-1000 range)
 scaled_score = int(score * 1000)
 print(f"Scaled score (0-1000): {scaled_score}")
 
-# For EZKL input
+# Prepare EZKL input
 ezkl_input = {
     "input_shapes": [[4]],
     "input_data": [features],
@@ -96,11 +97,12 @@ ezkl_input = {
     "public_output_idxs": [[0, 0]]
 }
 
+# Save EZKL input
 input_path = os.path.join(output_dir, "input.json")
 with open(input_path, "w") as f:
     json.dump(ezkl_input, f, indent=2)
 
-# Save debug file
+# Save debug information
 debug_info = {
     "address": address,
     "features": features,
@@ -108,6 +110,7 @@ debug_info = {
     "scaled_score": scaled_score,
     "credit_tier": tier,
     "favorable_rate_eligible": score > 0.5,
+    "model_weights": model.weights.tolist()[0],
     "timestamp": int(time.time())
 }
 

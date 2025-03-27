@@ -2,17 +2,17 @@ mod proof_registry;
 mod script_generator;
 mod utils;
 
-use anyhow::{Result, Context};
+use anyhow::{Result, anyhow};
 use std::path::Path;
-use std::process::Command;
 use std::fs;
+use std::process::Command;
 use synthetic_data::{
     generate_synthetic_data_with_test_addresses,
     save_data_as_json
 };
 
 use crate::proof_registry::create_proof_registry;
-use crate::script_generator::{initialize_shared_resources, create_address_input, create_ezkl_script, PROOF_GEN_DIR};
+use crate::script_generator::{initialize_shared_resources, create_address_input, create_ezkl_script, run_ezkl_process, PROOF_GEN_DIR};
 use crate::utils::{address_to_filename, get_features_for_address};
 
 const CONTRACTS_SRC_PATH: &str = "../../contracts/src";
@@ -30,9 +30,9 @@ fn main() -> Result<()> {
     fs::create_dir_all("proof_registry")?;
 
     // Step 1: Generate synthetic data with test addresses
-    println!("Generating synthetic data with test addresses...");
     let data = generate_synthetic_data_with_test_addresses(1000)?;
     save_data_as_json(&data, &format!("{}/credit_data.json", PROOF_GEN_DIR))?;
+    println!("[SUCCESS] Common EZKL setup completed successfully");
 
     // Define the addresses to generate proofs for
     let test_addresses = vec![
@@ -47,7 +47,21 @@ fn main() -> Result<()> {
     let sample_features = get_features_for_address(&data, sample_address)?;
     initialize_shared_resources(&sample_features, sample_address)?;
 
-    // Step 3: Generate proofs for each test address
+    // Step 3: Set up common EZKL resources
+    println!("Setting up common EZKL resources...");
+    let status = Command::new("sh")
+        .arg("./run_ezkl_common.sh")
+        .arg("proof_generation/credit_model.onnx")  // model path
+        .arg("proof_generation")                    // output dir
+        .arg("proof_generation/kzg.srs")           // srs path
+        .status()?;
+
+    if !status.success() {
+        return Err(anyhow!("Failed to run common EZKL setup"));
+    }
+    println!("[SUCCESS] Common EZKL setup completed successfully");
+
+    // Step 4: Generate proofs for each test address
     for address in &test_addresses {
         println!("Generating proof for address: {}", address);
 
@@ -58,6 +72,21 @@ fn main() -> Result<()> {
         // Get features for this address
         let address_features = get_features_for_address(&data, address)?;
 
+        // Get score and determine tier classification
+        let score = {
+            let mapping = data.address_mapping.as_ref().unwrap();
+            let index = mapping.get(&address.to_string()).unwrap();
+            data.scores[*index]
+        };
+        let tier = if score < 0.4 {
+            "LOW"
+        } else if score < 0.8 {
+            "MEDIUM"
+        } else {
+            "HIGH"
+        };
+        println!("Credit score for address {}: {:.3} ({})", address, score, tier);
+
         // Generate input.json for this address (using the shared model)
         create_address_input(&address_features, address, &address_dir)?;
 
@@ -67,20 +96,14 @@ fn main() -> Result<()> {
         let is_medium_tier = *address == MEDIUM_TIER_ADDRESS;
         create_ezkl_script(&script_path, &address_dir, is_medium_tier)?;
 
-        // Run EZKL script
-        let status = Command::new("bash")
-            .arg(&script_path)
-            .status()
-            .context("Failed to execute EZKL script")?;
-        
-        if !status.success() {
-            return Err(anyhow::anyhow!("EZKL script failed with status: {}", status));
-        }
+        // Run EZKL script using the new run_ezkl_process function
+        run_ezkl_process(&script_path)?;
 
         // Create proof registry entry
         println!("Creating proof registry entry...");
         create_proof_registry(address, &address_dir)?;
         println!("Successfully registered proof for address: {}", address);
+        println!();
     }
 
     // Step 4: Copy artifacts for medium tier address only
@@ -90,12 +113,12 @@ fn main() -> Result<()> {
 
     let medium_dir = format!("{}/{}", PROOF_GEN_DIR, address_to_filename(MEDIUM_TIER_ADDRESS));
     fs::copy(
-        format!("{}/Halo2Verifier.sol", medium_dir),
+        format!("{}/contract/verifier.sol", medium_dir),
         format!("{}/Halo2Verifier.sol", CONTRACTS_SRC_PATH)
     )?;
 
     fs::copy(
-        format!("{}/calldata.json", medium_dir),
+        format!("{}/contract/calldata.json", medium_dir),
         format!("{}/calldata.json", CONTRACTS_SCRIPT_PATH)
     )?;
 
