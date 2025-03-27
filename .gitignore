@@ -23,6 +23,8 @@ synthetic_data/example_*.json
 ezkl/sol_build
 ezkl/proof_generation
 ezkl/proof_registry
+ezkl/verifier_abi.json
+ezkl/shared_circuit
 
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
